@@ -1,6 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const url = require('url');
+const replaceTemplate = require('./modules/replaceTemplate');
 
 ///////////////////////////////////
 //FILES
@@ -25,13 +26,44 @@ const url = require('url');
 //////////////////////////////////////////////
 //SERVER
 
+const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
+const tempOverview = fs.readFileSync(`${__dirname}/templates/template-overview.html`, 'utf-8');
+const tempProduct = fs.readFileSync(`${__dirname}/templates/template-product.html`, 'utf-8');
+const tempCard = fs.readFileSync(`${__dirname}/templates/template-card.html`, 'utf-8');
+
+const dataObj = JSON.parse(data);
+
+
 const server = http.createServer((req, res) =>{
-    const pathName = req.url;
-    if(Object.is(pathName,'/') || Object.is(pathName,'overview')){
-        res.end('This is the OVERVIEW');
-    } else if(pathName === '/product'){
-        res.end('This is the PRODUCT');
-    }else{
+    
+    const {query, pathname} = url.parse(req.url, true); //this javascript es6 standard parses the url and extracts the query and pathname objects
+
+    //Overview page
+    if(Object.is(pathname,'/') || Object.is(pathname,'overview')){
+        res.writeHead(200, {'Content-type': 'text/html'});
+
+        const cardsHtml = dataObj.map(val => replaceTemplate(tempCard, val)).join(''); //use regex function defined to replace the placeholders in Cardshtml template.
+        const output = tempOverview.replace(/{%PRODUCTS_CARDS%}/g, cardsHtml); //insert the cardshtml string into the placeholder in the overview template.
+        
+        res.end(output);
+
+    //Product page
+    } else if(pathname === '/product'){
+        res.writeHead(200, {'Content-type': 'text/html'});
+        
+        const id = query.id; //access the id property of the query object and retrieve the json object at the position.
+        const output = replaceTemplate(tempProduct,dataObj[id]);
+        res.end(output);
+
+    //API
+    }else if (pathname === '/api'){
+        res.writeHead(200, {'Content-type': 'application/json'});
+        res.end(data);
+    }
+    
+
+    //NON-CATCHED PATHS
+    else {
         res.writeHead(404, {
             'Content-type': 'text/html',
             'my-own-header': 'hello-world',
@@ -40,6 +72,8 @@ const server = http.createServer((req, res) =>{
     }
 });
 
+
+//start the server and begin to listen for connections
 server.listen(8000,'127.0.0.1', () => {
     console.log('Listening to requests on port 8000');
 });
