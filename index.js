@@ -38,8 +38,6 @@ const dataObj = JSON.parse(data);
 
 const slugs = dataObj.map(element =>slugify(element.productName,{lower: true}));
 
-console.log(slugs);
-
 
 const server = http.createServer((req, res) =>{
     
