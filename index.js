@@ -1,6 +1,9 @@
 const fs = require('fs');
 const http = require('http');
 const url = require('url');
+
+const slugify = require('slugify');
+
 const replaceTemplate = require('./modules/replaceTemplate');
 
 ///////////////////////////////////
@@ -33,6 +36,10 @@ const tempCard = fs.readFileSync(`${__dirname}/templates/template-card.html`, 'u
 
 const dataObj = JSON.parse(data);
 
+const slugs = dataObj.map(element =>slugify(element.productName,{lower: true}));
+
+console.log(slugs);
+
 
 const server = http.createServer((req, res) =>{
     
@@ -42,7 +49,9 @@ const server = http.createServer((req, res) =>{
     if(Object.is(pathname,'/') || Object.is(pathname,'overview')){
         res.writeHead(200, {'Content-type': 'text/html'});
 
-        const cardsHtml = dataObj.map(val => replaceTemplate(tempCard, val)).join(''); //use regex function defined to replace the placeholders in Cardshtml template.
+        const cardsHtml = dataObj.map((val, i) => replaceTemplate(tempCard, val, slugs[i])).join(''); 
+        //use regex function defined to replace the placeholders in Cardshtml template.
+
         const output = tempOverview.replace(/{%PRODUCTS_CARDS%}/g, cardsHtml); //insert the cardshtml string into the placeholder in the overview template.
         
         res.end(output);
@@ -51,7 +60,10 @@ const server = http.createServer((req, res) =>{
     } else if(pathname === '/product'){
         res.writeHead(200, {'Content-type': 'text/html'});
         
-        const id = query.id; //access the id property of the query object and retrieve the json object at the position.
+        const slug = query.id; //access the id property of the query object and retrieve the json object at the position.
+        
+        const id = slugs.findIndex(currSlug => currSlug === slug); //retrieve the id of the slug by comparing query with the slug object
+        
         const output = replaceTemplate(tempProduct,dataObj[id]);
         res.end(output);
 
